@@ -12,6 +12,7 @@ RUN apt-get update \
 
 RUN git clone https://github.com/huggingface/picotron  \
     && cd picotron \
+    && git checkout 59714b1bf255 \
     && pip3 install torch==2.1.0 \
     && pip3 install -e .
 
