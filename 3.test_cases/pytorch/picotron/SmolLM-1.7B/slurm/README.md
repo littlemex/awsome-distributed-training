@@ -43,7 +43,7 @@ This guide demonstrates how to run distributed training across two GPU instances
    enroot remove -f picotron
    ```
 
-   This will create a config file `./conf/llama-1B-dp2-tp2-pp2/config.json` describing training configurations, including model architecture, training configuration, and dataset to use.
+   This will create a config file `./conf/llama-1B-tp2/config.json` describing training configurations, including model architecture, training configuration, and dataset to use.
 
 2. **Submit the Training Job**
    ```bash
