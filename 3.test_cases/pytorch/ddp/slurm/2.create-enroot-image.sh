@@ -9,4 +9,5 @@ if [ -f pytorch.sqsh ] ; then
     rm pytorch.sqsh
 fi
 
-enroot import --output pytorch.sqsh docker://pytorch/pytorch
+docker build -t pytorch-ddp -f ../Dockerfile ..
+enroot import -o pytorch.sqsh dockerd://pytorch-ddp:latest
