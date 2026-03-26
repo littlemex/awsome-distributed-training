@@ -31,7 +31,7 @@ declare -a TRAIN_ARGS=(
     --save_every 1
     --batch_size 32
     --checkpoint_path ./snapshot.pt
-    --use-mlflow
+    --use_mlflow
 )
 
 AUTO_RESUME=""
