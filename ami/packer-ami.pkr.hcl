@@ -35,6 +35,10 @@ variable "instance_type" {
   type    = string
   default = "g4dn.16xlarge"
 }
+variable "lustre_instance_type" {
+  type    = string
+  default = "m5.2xlarge"
+}
 variable "inventory_directory" {
   type    = string
   default = "inventory"
@@ -98,6 +102,27 @@ source "amazon-ebs" "ec2-ubuntu2404" {
   }
   tags = { OS = "Ubuntu 24.04", ParentAMI = data.amazon-parameterstore.ubuntu_server.value, ParentLookup = local.ubuntu_server_ssm }
 }
+source "amazon-ebs" "ec2-ubuntu2404-lustre" {
+  ami_name      = "${var.ami_name}-ec2-ubuntu2404-lustre-${var.ami_version}-${local.timestamp}"
+  instance_type = var.lustre_instance_type
+  region        = var.aws_region
+  source_ami    = data.amazon-parameterstore.ubuntu_server.value
+  ssh_username  = "ubuntu"
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
+  launch_block_device_mappings {
+    device_name           = "/dev/sda1"
+    volume_size           = 100
+    throughput            = 1000
+    iops                  = 10000
+    volume_type           = "gp3"
+    delete_on_termination = true
+  }
+  tags = { OS = "Ubuntu 24.04", ParentAMI = data.amazon-parameterstore.ubuntu_server.value, ParentLookup = local.ubuntu_server_ssm, EFAInstaller = "1.50.0-minimal", LustreClient = "2.15.6-1fsx34-source-build", LustreKernelLine = "linux-aws-lts-24.04" }
+}
+
 source "amazon-ebs" "ec2-ubuntu2404-dlami" {
   ami_name      = "${var.ami_name}-ec2-ubuntu2404-dlami-${var.ami_version}-${local.timestamp}"
   instance_type = var.instance_type
@@ -178,6 +203,27 @@ source "amazon-ebs" "eks-ubuntu2404" {
   }
   tags = { OS = "Ubuntu 24.04", ParentAMI = data.amazon-parameterstore.eks_ubuntu.value, ParentLookup = local.eks_ubuntu_ssm, EFAInstaller = "1.50.0-minimal" }
 }
+source "amazon-ebs" "eks-ubuntu2404-lustre" {
+  ami_name      = "${var.ami_name}-eks-ubuntu2404-lustre-${var.eks_version}-${var.ami_version}-${local.timestamp}"
+  instance_type = var.lustre_instance_type
+  region        = var.aws_region
+  source_ami    = data.amazon-parameterstore.eks_ubuntu.value
+  ssh_username  = "ubuntu"
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
+  launch_block_device_mappings {
+    device_name           = "/dev/sda1"
+    volume_size           = 100
+    throughput            = 1000
+    iops                  = 10000
+    volume_type           = "gp3"
+    delete_on_termination = true
+  }
+  tags = { OS = "Ubuntu 24.04", ParentAMI = data.amazon-parameterstore.eks_ubuntu.value, ParentLookup = local.eks_ubuntu_ssm, EFAInstaller = "1.50.0-minimal", LustreClient = "2.15.6-1fsx34-source-build", LustreKernelLine = "linux-aws-lts-24.04" }
+}
+
 source "amazon-ebs" "pcs-ubuntu2404" {
   ami_name      = "${var.ami_name}-pcs-ubuntu2404-${var.ami_version}-${local.timestamp}"
   instance_type = var.instance_type
@@ -253,5 +299,48 @@ build {
     playbook_file       = "playbook-pcs-ubuntu2404.yml"
     inventory_directory = var.inventory_directory
     extra_arguments     = ["--extra-vars", "aws_region=${var.aws_region}"]
+  }
+}
+build {
+  name    = "ec2-ubuntu2404-lustre"
+  sources = ["source.amazon-ebs.ec2-ubuntu2404-lustre"]
+  # The parent image boots a rolling kernel that has no published Lustre client module, so the
+  # kernel line is pinned first and the host reboots into it before the client is installed.
+  provisioner "ansible" {
+    user                = "ubuntu"
+    playbook_file       = "playbook-lustre-kernel.yml"
+    inventory_directory = var.inventory_directory
+  }
+  provisioner "shell" {
+    expect_disconnect = true
+    inline            = ["sudo systemctl reboot"]
+  }
+  provisioner "ansible" {
+    user                = "ubuntu"
+    playbook_file       = "playbook-ec2-ubuntu2404-lustre.yml"
+    inventory_directory = var.inventory_directory
+    pause_before        = "30s"
+  }
+}
+
+build {
+  name    = "eks-ubuntu2404-lustre"
+  sources = ["source.amazon-ebs.eks-ubuntu2404-lustre"]
+  # Same two stages as the EC2 target: pin the kernel line, reboot into it, then install the
+  # client. Kubernetes bootstrap stays owned by the parent image.
+  provisioner "ansible" {
+    user                = "ubuntu"
+    playbook_file       = "playbook-lustre-kernel.yml"
+    inventory_directory = var.inventory_directory
+  }
+  provisioner "shell" {
+    expect_disconnect = true
+    inline            = ["sudo systemctl reboot"]
+  }
+  provisioner "ansible" {
+    user                = "ubuntu"
+    playbook_file       = "playbook-eks-ubuntu2404-lustre.yml"
+    inventory_directory = var.inventory_directory
+    pause_before        = "30s"
   }
 }

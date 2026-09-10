@@ -1,0 +1,32 @@
+---
+# Kernel line to pin before the client is installed. The Ubuntu 24.04 server and EKS images
+# boot a rolling linux-aws kernel whose series has no published Lustre client module, so a
+# deliberate choice is required. Set to "" to keep whatever kernel the parent image booted.
+aws_lustre_kernel_meta: "linux-aws-lts-24.04"
+
+# build compiles the module for the pinned kernel and installs it, which is what an image wants:
+# the module is part of the artefact, a failed build fails the build, and no build system has to
+# stay behind. dkms registers the source instead so the module follows kernel installs, which is
+# what a host that updates kernels in place wants. binary installs a published module, which
+# exists only for some kernel releases.
+aws_lustre_mode: "build"
+
+# Kernels DKMS may build for, used by the dkms mode only. A build that fails inside a kernel
+# package's post-install hook can leave that package unconfigured, so kernels the client source
+# cannot support are excluded rather than attempted. The client does not build against 7.x.
+aws_lustre_kernel_filter: '^6\.[0-9]+\.'
+
+# Install a systemd unit that reports at boot whether the running kernel has a usable client. In
+# build mode a kernel update leaves the image's module behind; in dkms mode an excluded or failed
+# rebuild does the same. Either way the absence is otherwise invisible until a mount fails.
+aws_lustre_install_check_unit: true
+
+# Repository suite; empty means the codename of the running system.
+aws_lustre_repo_suite: ""
+
+# Where the installer is placed on the host.
+aws_lustre_installer_path: "/usr/local/sbin/lustre_installer.sh"
+
+# Amazon Linux 2023 ships the client module inside the kernel package, so only the userspace
+# package is installed there.
+aws_lustre_dnf_package: "lustre-client"

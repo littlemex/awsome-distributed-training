@@ -4,7 +4,7 @@ AWS_REGION ?= us-east-1
 SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
 
-.PHONY: ami ami_ec2_ubuntu2404 ami_ec2_ubuntu2404_dlami ami_pcluster_ubuntu2404 ami_eks_al2023 ami_eks_ubuntu2404 ami_pcs_ubuntu2404
+.PHONY: ami ami_ec2_ubuntu2404 ami_ec2_ubuntu2404_lustre ami_ec2_ubuntu2404_dlami ami_pcluster_ubuntu2404 ami_eks_al2023 ami_eks_ubuntu2404 ami_eks_ubuntu2404_lustre ami_pcs_ubuntu2404
 
 container_build:
 	docker build -t ${IMAGE} ./preflight
@@ -14,6 +14,8 @@ container: container_build container_run
 
 ami_ec2_ubuntu2404:
 	packer build -only 'ec2-ubuntu2404.*' -var aws_region=${AWS_REGION} -var "ami_version=1" packer-ami.pkr.hcl | tee ec2-ubuntu2404_ami.log
+ami_ec2_ubuntu2404_lustre:
+	packer build -only 'ec2-ubuntu2404-lustre.*' -var aws_region=${AWS_REGION} -var "ami_version=1" packer-ami.pkr.hcl | tee ec2-ubuntu2404-lustre_ami.log
 ami_ec2_ubuntu2404_dlami:
 	packer build -only 'ec2-ubuntu2404-dlami.*' -var aws_region=${AWS_REGION} -var "ami_version=1" packer-ami.pkr.hcl | tee ec2-ubuntu2404-dlami_ami.log
 ami_pcluster_ubuntu2404:
@@ -22,12 +24,14 @@ ami_eks_al2023:
 	packer build -only 'eks-al2023.*' -var aws_region=${AWS_REGION} -var "ami_version=1" packer-ami.pkr.hcl | tee eks-al2023_ami.log
 ami_eks_ubuntu2404:
 	packer build -only 'eks-ubuntu2404.*' -var aws_region=${AWS_REGION} -var "ami_version=1" packer-ami.pkr.hcl | tee eks-ubuntu2404_ami.log
+ami_eks_ubuntu2404_lustre:
+	packer build -only 'eks-ubuntu2404-lustre.*' -var aws_region=${AWS_REGION} -var "ami_version=1" packer-ami.pkr.hcl | tee eks-ubuntu2404-lustre_ami.log
 ami_pcs_ubuntu2404:
 	packer build -only 'pcs-ubuntu2404.*' -var aws_region=${AWS_REGION} -var "ami_version=1" packer-ami.pkr.hcl | tee pcs-ubuntu2404_ami.log
 
 ami:
 	@echo "Select one AMI target explicitly; builds create billable AWS resources." >&2
-	@echo "Targets: ami_ec2_ubuntu2404 ami_ec2_ubuntu2404_dlami ami_pcluster_ubuntu2404 ami_eks_al2023 ami_eks_ubuntu2404 ami_pcs_ubuntu2404" >&2
+	@echo "Targets: ami_ec2_ubuntu2404 ami_ec2_ubuntu2404_lustre ami_ec2_ubuntu2404_dlami ami_pcluster_ubuntu2404 ami_eks_al2023 ami_eks_ubuntu2404 ami_eks_ubuntu2404_lustre ami_pcs_ubuntu2404" >&2
 	@exit 2
 
 deploy_build:

@@ -1,0 +1,12 @@
+---
+- name: Pin the kernel line for the FSx for Lustre client
+  hosts: default
+  become: true
+  gather_facts: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+    - name: Select the kernel line the client module is published for
+      ansible.builtin.include_role:
+        name: aws_lustre
+        tasks_from: kernel
